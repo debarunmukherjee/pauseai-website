@@ -165,6 +165,7 @@ const languageNamesInEnglish = new Intl.DisplayNames('en', { type: 'language' })
 		])
 
 		// Process both message files and markdown files in parallel
+		console.log('translateOrLoadMessages')
 		const results = await Promise.all([
 			(async () => {
 				const result = await translateOrLoadMessages(

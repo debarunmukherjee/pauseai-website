@@ -113,14 +113,11 @@ export async function initializeGitCache(options: {
 		`\ud83d\udd04 Setting up translation repository from ${options.repo} into ${options.dir}`
 	)
 	await options.git.clone(remote, options.dir)
-	console.log('cloned')
 	await options.git.cwd(options.dir)
-	console.log('cwd')
 
 	// Always set git config in case we need to make local commits
 	await options.git.addConfig('user.name', options.username)
 	await options.git.addConfig('user.email', options.email)
-	console.log('config')
 }
 
 /**

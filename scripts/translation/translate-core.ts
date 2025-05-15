@@ -214,6 +214,7 @@ export async function translateOrLoad(
 	translationOptions: TranslationOptions
 ): Promise<{ cacheCount: number; totalProcessed: number }> {
 	const log = options.logMessageFn || console.log
+	console.log('translateOrLoad, log fn: ', log)
 	let done = 1
 	let total = 0
 	let cacheCount = 0
