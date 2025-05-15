@@ -10,6 +10,7 @@ import { execSync } from 'child_process'
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git'
 import { L10NS_BASE_DIR } from '../../src/lib/l10n'
 import { ensureDirectoryExists } from './utils'
+import { log } from 'console'
 
 /**
  * Configuration for Git operations
@@ -112,11 +113,14 @@ export async function initializeGitCache(options: {
 		`\ud83d\udd04 Setting up translation repository from ${options.repo} into ${options.dir}`
 	)
 	await options.git.clone(remote, options.dir)
+	console.log('cloned')
 	await options.git.cwd(options.dir)
+	console.log('cwd')
 
 	// Always set git config in case we need to make local commits
 	await options.git.addConfig('user.name', options.username)
 	await options.git.addConfig('user.email', options.email)
+	console.log('config')
 }
 
 /**
@@ -126,6 +130,7 @@ export async function initializeGitCache(options: {
  * @returns A Promise that resolves to a Map where keys are file paths and values are the latest commit dates.
  */
 export async function getLatestCommitDates(git: SimpleGit): Promise<Map<string, Date>> {
+	console.log('getLatestCommitDates')
 	const latestCommitDatesMap = new Map<string, Date>()
 	const log = await git.log({
 		'--stat': 4096
