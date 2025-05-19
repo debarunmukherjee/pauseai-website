@@ -20,7 +20,7 @@ import {
 	initializeGitCache
 } from './git-ops'
 import { createLlmClient, createRequestQueue, LLM_DEFAULTS } from './llm-client'
-import { generateJsonPrompt, generateMarkdownPrompt } from './prompts'
+import { generateJsonPrompt, generateMarkdownPrompt, generateReviewPrompt } from './prompts'
 import { translateOrLoadMarkdown, translateOrLoadMessages } from './translate-core'
 import { requireEnvVar } from './utils'
 
@@ -172,7 +172,7 @@ const languageNamesInEnglish = new Intl.DisplayNames('en', { type: 'language' })
 					{
 						sourcePath: MESSAGE_SOURCE,
 						languageTags: languageTags,
-						promptGenerator: generateJsonPrompt,
+						promptGenerators: [generateJsonPrompt, generateReviewPrompt],
 						targetDir: MESSAGE_L10NS,
 						cacheGitCwd: L10NS_BASE_DIR,
 						logMessageFn: logMessage
@@ -197,7 +197,7 @@ const languageNamesInEnglish = new Intl.DisplayNames('en', { type: 'language' })
 						sourcePaths: markdownPathsFromRoot,
 						sourceBaseDir: MARKDOWN_SOURCE,
 						languageTags: languageTags,
-						promptGenerator: generateMarkdownPrompt,
+						promptGenerators: [generateMarkdownPrompt, generateReviewPrompt],
 						targetDir: MARKDOWN_L10NS,
 						cacheGitCwd: L10NS_BASE_DIR,
 						logMessageFn: logMessage
@@ -222,6 +222,11 @@ const languageNamesInEnglish = new Intl.DisplayNames('en', { type: 'language' })
 			console.log(`   - ${newTranslations} files needed new translations`)
 
 			// Only push to Git if we actually created new translations
+
+			// **We need to remove use of a single mainline for the repos very soon!**
+			// Currently developers can touch the repos easily, as can previews for pull requests etc.
+			// Any subsequent production deploy would show use the altereed in-development translations to viewers
+
 			if (newTranslations > 0) {
 				console.log(`\nPushing translation changes to repository...`)
 				await cacheGit.push()

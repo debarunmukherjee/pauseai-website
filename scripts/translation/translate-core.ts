@@ -50,7 +50,7 @@ export interface TranslationOptions {
  * or collects statistics in dry run mode without making API calls.
  *
  * @param content - The original content to be translated.
- * @param promptGenerator - A function for generating the translation prompt.
+ * @param promptGenerators - Functions for generating the translation and review prompt.
  * @param language - The target language code.
  * @param promptAdditions - Additional context to include in the prompt.
  * @param options - Translation configuration options.
@@ -60,7 +60,7 @@ export interface TranslationOptions {
  */
 export async function translate(
 	content: string,
-	promptGenerator: PromptGenerator,
+	promptGenerators: PromptGenerator[],
 	language: string,
 	promptAdditions: string,
 	options: TranslationOptions,
@@ -69,7 +69,8 @@ export async function translate(
 	const languageName = options.languageNameGenerator.of(language)
 	if (!languageName) throw new Error(`Couldn't resolve language code: ${language}`)
 
-	const translationPrompt = promptGenerator(languageName, content, promptAdditions)
+	const translationPrompt = promptGenerators[0](languageName, content, promptAdditions)
+	console.log(translationPrompt)
 
 	// In dry run mode, collect statistics instead of making API calls
 	if (options.isDryRun) {
@@ -103,7 +104,8 @@ export async function translate(
 	}
 
 	// Second pass: review and refine translation with context
-	const reviewPrompt = `Please review your translation to ${languageName} for accuracy and naturalness. Make improvements where necessary but keep the meaning identical to the source.`
+	const reviewPrompt = promptGenerators[1](languageName)
+	console.log(reviewPrompt)
 
 	const reviewed = await postChatCompletion(options.llmClient, options.requestQueue, [
 		{ role: 'user', content: translationPrompt },
@@ -136,7 +138,7 @@ export async function translateOrLoadMessages(
 	options: {
 		sourcePath: string
 		languageTags: string[]
-		promptGenerator: PromptGenerator
+		promptGenerators: PromptGenerator[]
 		targetDir: string
 		cacheGitCwd: string
 		logMessageFn?: (msg: string) => void
@@ -147,7 +149,7 @@ export async function translateOrLoadMessages(
 		{
 			sourcePaths: [options.sourcePath],
 			languageTags: options.languageTags,
-			promptGenerator: options.promptGenerator,
+			promptGenerators: options.promptGenerators,
 			targetStrategy: (language) => path.join(options.targetDir, language + '.json'),
 			cacheGitCwd: options.cacheGitCwd,
 			logMessageFn: options.logMessageFn
@@ -170,7 +172,7 @@ export async function translateOrLoadMarkdown(
 		sourcePaths: string[]
 		sourceBaseDir: string
 		languageTags: string[]
-		promptGenerator: PromptGenerator
+		promptGenerators: PromptGenerator[]
 		targetDir: string
 		cacheGitCwd: string
 		logMessageFn?: (msg: string) => void
@@ -181,7 +183,7 @@ export async function translateOrLoadMarkdown(
 		{
 			sourcePaths: options.sourcePaths,
 			languageTags: options.languageTags,
-			promptGenerator: options.promptGenerator,
+			promptGenerators: options.promptGenerators,
 			targetStrategy: (language, sourcePath) => {
 				const relativePath = path.relative(options.sourceBaseDir, sourcePath)
 				return path.join(options.targetDir, language, relativePath)
@@ -206,7 +208,7 @@ export async function translateOrLoad(
 	options: {
 		sourcePaths: string[]
 		languageTags: string[]
-		promptGenerator: PromptGenerator
+		promptGenerators: PromptGenerator[]
 		targetStrategy: TargetStrategy
 		cacheGitCwd: string
 		logMessageFn?: (msg: string) => void
@@ -268,7 +270,7 @@ export async function translateOrLoad(
 
 						const translation = await translate(
 							processedContent,
-							options.promptGenerator,
+							options.promptGenerators,
 							languageTag,
 							promptAdditions,
 							translationOptions,
