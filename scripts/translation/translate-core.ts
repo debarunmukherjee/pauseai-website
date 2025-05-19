@@ -70,7 +70,7 @@ export async function translate(
 	if (!languageName) throw new Error(`Couldn't resolve language code: ${language}`)
 
 	const translationPrompt = promptGenerators[0](languageName, content, promptAdditions)
-	console.log(translationPrompt)
+	// Translation prompt ready
 
 	// In dry run mode, collect statistics instead of making API calls
 	if (options.isDryRun) {
@@ -216,7 +216,7 @@ export async function translateOrLoad(
 	translationOptions: TranslationOptions
 ): Promise<{ cacheCount: number; totalProcessed: number }> {
 	const log = options.logMessageFn || console.log
-	console.log('translateOrLoad, log fn: ', log)
+	// Log function ready
 	let done = 1
 	let total = 0
 	let cacheCount = 0

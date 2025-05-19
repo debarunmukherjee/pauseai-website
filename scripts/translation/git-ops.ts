@@ -10,7 +10,6 @@ import { execSync } from 'child_process'
 import simpleGit, { SimpleGit, SimpleGitOptions } from 'simple-git'
 import { L10NS_BASE_DIR } from '../../src/lib/l10n'
 import { ensureDirectoryExists } from './utils'
-import { log } from 'console'
 
 /**
  * Configuration for Git operations
