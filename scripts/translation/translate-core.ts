@@ -96,6 +96,7 @@ export async function translate(
 	if (!firstPass) throw new Error(`Translation to ${languageName} failed`)
 
 	if (options.verbose) {
+		console.log('First prompt: ', translationPrompt)
 		console.log('First pass response:', firstPass)
 	} else {
 		console.log(
@@ -103,10 +104,8 @@ export async function translate(
 		)
 	}
 
-	// Second pass: review and refine translation with context
+	// Secon d pass: review and refine translation with context
 	const reviewPrompt = promptGenerators[1](languageName)
-	console.log(reviewPrompt)
-
 	const reviewed = await postChatCompletion(options.llmClient, options.requestQueue, [
 		{ role: 'user', content: translationPrompt },
 		{ role: 'assistant', content: firstPass },
@@ -116,6 +115,7 @@ export async function translate(
 	if (!reviewed) throw new Error(`Review of ${languageName} translation failed`)
 
 	if (options.verbose) {
+		console.log('Review prompt: ', reviewPrompt)
 		console.log('Review pass response:', reviewed)
 	} else {
 		console.log(
