@@ -158,10 +158,10 @@ const languageNamesInEnglish = new Intl.DisplayNames('en', { type: 'language' })
 					email: GIT_CONFIG.EMAIL,
 					git: cacheGit
 				})
-				translationOptions.cacheLatestCommitDates = await getLatestCommitDates(cacheGit)
+				translationOptions.cacheLatestCommitDates = await getLatestCommitDates(cacheGit, 'cache')
 			})(),
 			(async () =>
-				(translationOptions.mainLatestCommitDates = await getLatestCommitDates(mainGit)))()
+				(translationOptions.mainLatestCommitDates = await getLatestCommitDates(mainGit, 'main')))()
 		])
 
 		// Process both message files and markdown files in parallel

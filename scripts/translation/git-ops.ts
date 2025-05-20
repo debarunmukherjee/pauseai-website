@@ -140,19 +140,24 @@ export async function initializeGitCache(options: {
  * @param git - The SimpleGit instance used to retrieve the log.
  * @returns A Promise that resolves to a Map where keys are file paths and values are the latest commit dates.
  */
-export async function getLatestCommitDates(git: SimpleGit): Promise<Map<string, Date>> {
-	console.log('Starting git log retrieval for commit dates...')
+export async function getLatestCommitDates(
+	git: SimpleGit,
+	repoType: string = 'repo'
+): Promise<Map<string, Date>> {
+	console.log(`Starting git log retrieval for ${repoType} commit dates...`)
 	const latestCommitDatesMap = new Map<string, Date>()
 
-	console.time('⏱️ Git Log Retrieval')
+	const timerLabelLog = `⏱️ Git Log Retrieval - ${repoType}`
+	console.time(timerLabelLog)
 	const log = await git.log({
 		'--stat': 4096
 	})
-	console.timeEnd('⏱️ Git Log Retrieval')
+	console.timeEnd(timerLabelLog)
 
-	console.log(`Retrieved ${log.all.length} commits for date analysis`)
+	console.log(`Retrieved ${log.all.length} commits for ${repoType} date analysis`)
 
-	console.time('⏱️ Parse Git Log')
+	const timerLabelParse = `⏱️ Parse Git Log - ${repoType}`
+	console.time(timerLabelParse)
 	for (const entry of log.all) {
 		const files = entry.diff?.files
 		if (!files) continue
@@ -162,9 +167,9 @@ export async function getLatestCommitDates(git: SimpleGit): Promise<Map<string, 
 			}
 		}
 	}
-	console.timeEnd('⏱️ Parse Git Log')
+	console.timeEnd(timerLabelParse)
 
-	console.log(`Parsed dates for ${latestCommitDatesMap.size} files`)
+	console.log(`Parsed dates for ${latestCommitDatesMap.size} files in ${repoType}`)
 	return latestCommitDatesMap
 }
 
