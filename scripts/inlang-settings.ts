@@ -5,14 +5,14 @@ import path from 'path'
 import { getDevContext, possiblyOverriddenLocales } from '../src/lib/env'
 import {
 	getDefaultSettings,
-	L10NS_BASE_DIR,
+	L10N_CAGE_DIR,
 	MARKDOWN_L10NS,
 	MESSAGE_L10NS,
 	MESSAGE_SOURCE,
 	writeSettingsFile
 } from '../src/lib/l10n'
-import { setupTranslationRepo } from './translation/git-ops'
-import { createSymlinkIfNeeded, ensureDirectoriesExist } from './translation/utils'
+import { setupL10nCage } from './l10n/git-ops'
+import { cullCommentary, createSymlinkIfNeeded, ensureDirectoriesExist } from './l10n/utils'
 
 // Load environment variables from .env file
 dotenv.config()
@@ -60,15 +60,21 @@ function regenerateSettings(verbose = false): void {
 		console.log(`Using locales: ${settings.locales.join(', ')}`)
 	}
 
-	// Determine if we're allowing translation generation based on API key presence
+	// Determine if we're allowing l10n generation based on API key presence
 	const allowGeneration = !!process.env.TRANSLATION_OPENROUTER_API_KEY
 	if (verbose) {
-		console.log(`\ud83e\udd16 Translation generation: ${allowGeneration ? 'ENABLED' : 'DISABLED'}`)
+		console.log(`\ud83e\udd16 L10n generation: ${allowGeneration ? 'ENABLED' : 'DISABLED'}`)
+	}
+
+	// Force-remove cached l10n-cage in CI to prevent broken Git state
+	if (process.env.CI === 'true' && fs.existsSync(L10N_CAGE_DIR)) {
+		console.log('🧹 CI: Force-removing cached l10n-cage (prevents broken Git state)')
+		fs.rmSync(L10N_CAGE_DIR, { recursive: true, force: true })
 	}
 
 	// Create required directories
 	if (verbose) console.log('\n\ud83d\udcc1 Creating required directories...')
-	ensureDirectoriesExist([L10NS_BASE_DIR, MESSAGE_L10NS, MARKDOWN_L10NS], verbose)
+	ensureDirectoriesExist([L10N_CAGE_DIR, MESSAGE_L10NS, MARKDOWN_L10NS], verbose)
 
 	// Create locale-specific directories
 	settings.locales.forEach((locale) => {
@@ -82,17 +88,18 @@ function regenerateSettings(verbose = false): void {
 	// Skip repository setup if we're only using English
 	if (settings.locales.length === 1 && settings.locales[0] === 'en') {
 		if (verbose) {
-			console.log(
-				"\n\ud83d\udcdd Translation repository setup skipped - English-only mode doesn't need translations"
-			)
+			console.log("\n\ud83d\udcdd L10n cage setup skipped - English-only mode doesn't need l10ns")
 		}
 	} else {
-		// Clone or update the translation repository
+		// Clone or update the l10n cage
 		if (verbose)
-			console.log(
-				`\n\ud83d\udd04 Setting up translation repository (need at least ${settings.locales}...`
-			)
-		setupTranslationRepo(L10NS_BASE_DIR, verbose)
+			console.log(`\n\ud83d\udd04 Setting up l10n cage (need at least ${settings.locales}...`)
+		setupL10nCage(L10N_CAGE_DIR, verbose)
+		if (verbose) console.log(`\n🧹 Cleaning up l10n files to remove LLM commentary...`)
+		for (const locale of settings.locales) {
+			if (locale === 'en') continue
+			cullCommentary(path.join(MESSAGE_L10NS, `${locale}.json`), verbose)
+		}
 	}
 
 	// For English locale, we only need to provide messages file for Paraglide
@@ -118,8 +125,32 @@ function regenerateSettings(verbose = false): void {
 
 	console.log(`\ud83d\udd04 Compiling Paraglide runtime from settings...`)
 	try {
-		// Run the Paraglide compiler with the necessary Node.js flags
-		compile(COMPILE_ARGS)
+		const routingStrategy = defaultSettings['plugin.paraglide-js-adapter']?.routing?.strategy
+
+		const compileOptions: Parameters<typeof compile>[0] = {
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+			strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+			// Fix for Netlify Edge Functions (Deno runtime)
+			disableAsyncLocalStorage: true,
+			isServer: "typeof window === 'undefined' || 'Deno' in globalThis"
+		}
+
+		// Only set urlPatterns for prefix-all-locales strategy
+		// Default Paraglide behavior handles regular prefix strategy correctly
+		if (routingStrategy === 'prefix-all-locales') {
+			compileOptions.urlPatterns = [
+				{
+					pattern: ':protocol://:domain(.*)::port?/:path(.*)?',
+					localized: settings.locales.map((locale) => [
+						locale,
+						`:protocol://:domain(.*)::port?/${locale}/:path(.*)?`
+					])
+				}
+			]
+		}
+
+		compile(compileOptions)
 		console.log(`\u2705 Paraglide runtime compiled successfully!`)
 	} catch (error) {
 		console.error('\u274c Failed to compile Paraglide runtime:', (error as Error).message)
